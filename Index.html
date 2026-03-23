@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Dating Truth Report</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --bg: #08080d;
+  --surface: #0f0f18;
+  --border: rgba(255,255,255,0.07);
+  --border-hot: rgba(255,100,60,0.4);
+  --red: #ff4d2e;
+  --red-soft: rgba(255,77,46,0.12);
+  --red-glow: rgba(255,77,46,0.35);
+  --amber: #f0a500;
+  --amber-soft: rgba(240,165,0,0.12);
+  --green: #2dd4a0;
+  --text: #f0ede8;
+  --sub: rgba(240,237,232,0.5);
+  --dim: rgba(240,237,232,0.25);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Playfair Display',serif;overflow-x:hidden;min-height:100vh}
+
+/* ─── Canvas ─── */
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+.z{position:relative;z-index:10}
+
+/* ─── HERO ─── */
+#hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;gap:0}
+
+.logo-wrap{width:120px;height:120px;margin:0 auto 2rem;animation:float 7s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0) rotate(0deg)}40%{transform:translateY(-14px) rotate(2deg)}70%{transform:translateY(-7px) rotate(-1.5deg)}}
+
+.eyebrow{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.4em;color:var(--red);text-transform:uppercase;margin-bottom:1.4rem;opacity:0;animation:up 1s .2s both}
+.hero-h{font-size:clamp(3rem,9vw,6.5rem);font-weight:900;line-height:.9;letter-spacing:-.03em;margin-bottom:.5rem;opacity:0;animation:up 1s .4s both}
+.hero-h span{font-style:italic;color:var(--red)}
+.hero-sub{font-size:clamp(1rem,2.2vw,1.25rem);font-weight:400;font-style:italic;color:var(--sub);max-width:500px;line-height:1.65;margin:1.2rem auto 2.5rem;opacity:0;animation:up 1s .6s both}
+
+.phase-pills{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;margin-bottom:2.8rem;opacity:0;animation:up 1s .7s both}
+.pill{font-family:'DM Mono',monospace;font-size:.5rem;letter-spacing:.15em;padding:.35rem .9rem;border:1px solid var(--border);color:var(--dim);text-transform:uppercase}
+
+.cta{background:var(--red);color:#fff;font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;padding:1.1rem 3rem;border:none;cursor:pointer;transition:all .3s;box-shadow:0 0 0 var(--red-glow);opacity:0;animation:up 1s .9s both}
+.cta:hover{box-shadow:0 0 50px var(--red-glow);transform:translateY(-2px)}
+
+@keyframes up{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── PHASE ENGINE ─── */
+#phase-engine{display:none;max-width:700px;margin:0 auto;padding:3rem 1.5rem 6rem}
+
+.phase-header{text-align:center;margin-bottom:3.5rem}
+.phase-tag{font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.35em;color:var(--red);text-transform:uppercase;margin-bottom:.8rem}
+.phase-title{font-size:clamp(2rem,5vw,3.2rem);font-weight:700;line-height:1;margin-bottom:.7rem}
+.phase-title em{font-style:italic;color:var(--amber)}
+.phase-goal{font-size:1rem;color:var(--sub);font-style:italic;line-height:1.6;max-width:440px;margin:0 auto}
+
+/* Progress */
+.prog-wrap{margin-bottom:3rem}
+.prog-row{display:flex;gap:4px;margin-bottom:.5rem}
+.prog-seg{height:2px;flex:1;background:var(--border);transition:background .4s}
+.prog-seg.done{background:var(--red);box-shadow:0 0 8px var(--red-glow)}
+.prog-seg.active{background:var(--amber)}
+.prog-label{font-family:'DM Mono',monospace;font-size:.55rem;color:var(--sub);letter-spacing:.15em;text-align:right}
+
+/* Q card */
+.q-card{border:1px solid var(--border);background:rgba(255,255,255,.025);padding:2rem;margin-bottom:1.4rem;opacity:0;animation:up .5s forwards;transition:border-color .3s}
+.q-card:focus-within{border-color:rgba(255,77,46,.3)}
+.q-phase-label{font-family:'DM Mono',monospace;font-size:.5rem;letter-spacing:.25em;color:var(--red);text-transform:uppercase;margin-bottom:.6rem}
+.q-name{font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.2em;color:var(--amber);text-transform:uppercase;margin-bottom:.5rem}
+.q-text{font-size:1.1rem;font-style:italic;line-height:1.6;margin-bottom:1.3rem;color:var(--text)}
+.q-hint{font-size:.85rem;color:var(--dim);margin-bottom:1rem;font-style:italic}
+
+/* Input types */
+.q-textarea{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-family:'Playfair Display',serif;font-size:1rem;line-height:1.6;padding:.6rem 0;resize:none;outline:none;min-height:60px;transition:border-color .3s}
+.q-textarea:focus{border-bottom-color:var(--red)}
+.q-textarea::placeholder{color:var(--dim);font-style:italic}
+
+/* Scale input */
+.scale-wrap{display:flex;gap:.5rem;flex-wrap:wrap}
+.scale-btn{font-family:'DM Mono',monospace;font-size:.6rem;width:38px;height:38px;border:1px solid var(--border);background:transparent;color:var(--sub);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.scale-btn:hover,.scale-btn.sel{border-color:var(--red);background:var(--red-soft);color:var(--text)}
+.scale-btn.sel{box-shadow:0 0 14px var(--red-glow)}
+
+/* Choice input */
+.choice-wrap{display:flex;gap:.6rem;flex-wrap:wrap}
+.choice-btn{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.1em;padding:.7rem 1.2rem;border:1px solid var(--border);background:transparent;color:var(--sub);cursor:pointer;transition:all .2s;text-transform:uppercase;flex:1;min-width:100px;text-align:center}
+.choice-btn:hover,.choice-btn.sel{border-color:var(--red);background:var(--red-soft);color:var(--text)}
+.choice-btn.sel{box-shadow:0 0 14px var(--red-glow)}
+
+/* Nav */
+.nav-row{display:flex;gap:1rem;margin-top:3rem;align-items:center;justify-content:space-between}
+.btn-back{background:transparent;border:1px solid var(--border);color:var(--sub);font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.15em;padding:.8rem 1.8rem;cursor:pointer;transition:all .3s;text-transform:uppercase}
+.btn-back:hover{border-color:var(--text);color:var(--text)}
+.btn-next{background:var(--red);color:#fff;font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.2em;padding:.9rem 2.4rem;border:none;cursor:pointer;transition:all .3s;text-transform:uppercase;opacity:.4;pointer-events:none}
+.btn-next.on{opacity:1;pointer-events:all}
+.btn-next.on:hover{box-shadow:0 0 30px var(--red-glow);transform:translateY(-1px)}
+
+/* ─── RESULTS ─── */
+#results{display:none;max-width:820px;margin:0 auto;padding:2rem 1.5rem 6rem}
+
+/* Truth Score hero */
+.ts-hero{text-align:center;padding:4rem 2rem 3rem;border:1px solid var(--border);position:relative;overflow:hidden;margin-bottom:1px}
+.ts-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center top,rgba(255,77,46,.12) 0%,transparent 65%);pointer-events:none}
+.ts-tag{font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.35em;color:var(--red);text-transform:uppercase;margin-bottom:.8rem}
+.ts-score{font-family:'DM Mono',monospace;font-size:clamp(4.5rem,15vw,9rem);line-height:1;color:var(--red);text-shadow:0 0 80px var(--red-glow);margin-bottom:.3rem}
+.ts-label{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.25em;color:var(--sub);margin-bottom:2.5rem}
+.archetype-tag{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.3em;color:var(--amber);text-transform:uppercase;margin-bottom:.6rem}
+.archetype-name{font-size:clamp(2rem,5vw,3.5rem);font-weight:900;font-style:italic;margin-bottom:1.2rem;line-height:1}
+.brutal-insight{font-size:1.1rem;font-style:italic;color:var(--sub);max-width:520px;margin:0 auto 2rem;line-height:1.75}
+
+/* Secure Base bars */
+.sb-block{border:1px solid var(--border);margin-bottom:1px}
+.sb-header{padding:1.3rem 2rem;background:rgba(255,255,255,.03);border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.3em;color:var(--sub);text-transform:uppercase}
+.sb-bars{padding:1.8rem 2rem}
+.sb-row{margin-bottom:1.4rem}
+.sb-row:last-child{margin-bottom:0}
+.sb-row-top{display:flex;justify-content:space-between;margin-bottom:.5rem;font-family:'DM Mono',monospace;font-size:.58rem}
+.sb-row-top span:first-child{color:var(--text)}
+.sb-row-top span:last-child{color:var(--red)}
+.sb-track{height:2px;background:var(--border)}
+.sb-fill{height:100%;transition:width 1.4s cubic-bezier(.4,0,.2,1);background:linear-gradient(to right,var(--amber),var(--red));box-shadow:0 0 10px var(--red-glow)}
+
+/* AI Panel */
+.ai-panel{border:1px solid var(--border);margin-bottom:1px}
+.ai-tabs{display:flex;border-bottom:1px solid var(--border)}
+.ai-tab{flex:1;padding:1.2rem;text-align:center;font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;background:transparent;border:none;color:var(--sub);transition:all .3s;border-bottom:2px solid transparent}
+.ai-tab.active{color:var(--text);border-bottom-color:var(--red);background:rgba(255,77,46,.05)}
+.ai-tab:hover:not(.active){color:var(--text)}
+.ai-content{padding:2rem;min-height:220px;font-size:1.05rem;line-height:1.85;color:var(--sub)}
+.ai-content strong{color:var(--text)}
+.ai-content em{color:var(--amber);font-style:italic}
+
+.ai-loading{display:flex;align-items:center;gap:.8rem;color:var(--dim);font-style:italic}
+.dot-pulse{display:flex;gap:4px}
+.dot-pulse span{width:5px;height:5px;background:var(--red);border-radius:50%;animation:pulse .8s ease-in-out infinite}
+.dot-pulse span:nth-child(2){animation-delay:.16s}
+.dot-pulse span:nth-child(3){animation-delay:.32s}
+@keyframes pulse{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+
+.sec-label{font-family:'DM Mono',monospace;font-size:.52rem;letter-spacing:.3em;color:var(--red);text-transform:uppercase;display:block;margin-bottom:.5rem;margin-top:1.5rem}
+.sec-label:first-child{margin-top:0}
+
+/* Loop steps in results */
+.loop-display{padding:1.8rem 2rem}
+.loop-step-r{display:flex;align-items:flex-start;gap:1rem;margin-bottom:1rem;opacity:0;animation:up .4s forwards}
+.loop-num-r{font-family:'DM Mono',monospace;font-size:.55rem;width:26px;height:26px;border:1px solid var(--red);color:var(--red);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.1rem}
+.loop-text-r{font-size:.95rem;color:var(--text);line-height:1.55;padding:.6rem 1rem;background:rgba(255,77,46,.05);border-left:1px solid var(--red);flex:1}
+.loop-conn{width:1px;height:18px;background:linear-gradient(to bottom,var(--red),transparent);margin-left:12px;opacity:.4}
+.loop-truth{margin-top:1.5rem;padding:1.5rem;border:1px solid rgba(255,77,46,.25);text-align:center;font-size:1.15rem;font-style:italic;color:var(--text);background:var(--red-soft)}
+
+/* Share strip */
+.share-strip{display:flex;gap:1px;margin-bottom:1px}
+.share-btn{flex:1;padding:1.1rem;background:rgba(255,255,255,.03);border:1px solid var(--border);font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.15em;text-transform:uppercase;color:var(--sub);cursor:pointer;transition:all .3s;text-align:center}
+.share-btn:hover{background:var(--red-soft);border-color:var(--red);color:var(--text)}
+
+.restart-btn{display:block;width:100%;padding:1rem;background:transparent;border:1px solid var(--border);color:var(--dim);font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;transition:all .3s;margin-top:1px;text-align:center}
+.restart-btn:hover{border-color:var(--sub);color:var(--sub)}
+
+/* Archetype color variants */
+.arch-secure .ts-score,.arch-secure .archetype-name{color:var(--green);text-shadow:0 0 60px rgba(45,212,160,.3)}
+.arch-secure .sb-fill{background:linear-gradient(to right,var(--green),var(--amber))}
+.arch-distorted .ts-score,.arch-distorted .archetype-name{color:var(--amber);text-shadow:0 0 60px rgba(240,165,0,.3)}
+.arch-distorted .sb-fill{background:linear-gradient(to right,var(--amber),var(--red))}
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<!-- ═══ HERO ═══ -->
+<section id="hero" class="z">
+  <div class="logo-wrap">
+    <svg viewBox="0 0 120 120" fill="none" width="120" height="120">
+      <circle cx="60" cy="60" r="57" stroke="#ff4d2e" stroke-width=".5" stroke-dasharray="6 5" opacity=".3">
+        <animateTransform attributeName="transform" type="rotate" from="0 60 60" to="360 60 60" dur="40s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="60" cy="60" r="46" stroke="#f0a500" stroke-width=".5" stroke-dasharray="3 9" opacity=".2">
+        <animateTransform attributeName="transform" type="rotate" from="360 60 60" to="0 60 60" dur="25s" repeatCount="indefinite"/>
+      </circle>
+      <path d="M60 22 C78 22 92 36 92 54 C92 66 85 76 75 82" stroke="#ff4d2e" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".9"/>
+      <path d="M75 82 C68 87 60 89 52 86 C40 81 33 68 33 54 C33 36 45 22 60 22" stroke="#ff4d2e" stroke-width=".8" fill="none" stroke-dasharray="3 4" opacity=".5"/>
+      <line x1="60" y1="42" x2="60" y2="55" stroke="#f0a500" stroke-width="1" opacity=".6"/>
+      <line x1="60" y1="55" x2="71" y2="55" stroke="#f0a500" stroke-width="1" opacity=".6"/>
+      <line x1="71" y1="55" x2="71" y2="68" stroke="#f0a500" stroke-width="1" opacity=".4"/>
+      <line x1="49" y1="55" x2="60" y2="55" stroke="#ff4d2e" stroke-width=".6" opacity=".35"/>
+      <line x1="49" y1="63" x2="49" y2="55" stroke="#ff4d2e" stroke-width=".6" opacity=".35"/>
+      <line x1="60" y1="68" x2="60" y2="78" stroke="#ff4d2e" stroke-width="1" opacity=".7"/>
+      <circle cx="60" cy="60" r="3.5" fill="#ff4d2e" opacity=".95"/>
+      <circle cx="60" cy="60" r="7" stroke="#ff4d2e" stroke-width=".5" fill="none" opacity=".35"/>
+      <polygon points="75,77 71,85 79,85" fill="#ff4d2e" opacity=".8"/>
+    </svg>
+  </div>
+  <p class="eyebrow">AI Relational Psychology Diagnostic</p>
+  <h1 class="hero-h">The Dating<br><span>Truth Report</span></h1>
+  <p class="hero-sub">A 20-question psychological deep dive that identifies your exact dating loop, archetype, and the blind spot keeping you stuck.</p>
+  <div class="phase-pills">
+    <div class="pill">Phase 1 — The Hook</div>
+    <div class="pill">Phase 2 — The Mirror</div>
+    <div class="pill">Phase 3 — Reality Check</div>
+    <div class="pill">Phase 4 — The Science</div>
+    <div class="pill">Phase 5 — Ownership</div>
+  </div>
+  <button class="cta" onclick="startReport()">Begin Truth Report</button>
+</section>
+
+<!-- ═══ PHASE ENGINE ═══ -->
+<section id="phase-engine" class="z">
+  <div class="phase-header" id="phase-header"></div>
+  <div class="prog-wrap">
+    <div class="prog-row" id="prog-segs"></div>
+    <div class="prog-label" id="prog-label">Phase 1 of 5</div>
+  </div>
+  <div id="questions-container"></div>
+  <div class="nav-row">
+    <button class="btn-back" id="btn-back" onclick="prevPhase()">← Back</button>
+    <button class="btn-next" id="btn-next" onclick="nextPhase()">Continue →</button>
+  </div>
+</section>
+
+<!-- ═══ RESULTS ═══ -->
+<section id="results" class="z">
+  <div class="ts-hero" id="ts-hero">
+    <div class="ts-tag">Your Truth Score</div>
+    <div class="ts-score" id="ts-score">—</div>
+    <div class="ts-label">Reality Alignment</div>
+    <div class="archetype-tag" id="arch-tag">Your Archetype</div>
+    <h2 class="archetype-name" id="arch-name">—</h2>
+    <p class="brutal-insight" id="brutal-insight">—</p>
+  </div>
+
+  <!-- Secure Base bars -->
+  <div class="sb-block">
+    <div class="sb-header">Secure Base Score — Romantic Competence Index</div>
+    <div class="sb-bars" id="sb-bars"></div>
+  </div>
+
+  <!-- Dating Loop -->
+  <div class="ai-panel" id="loop-panel">
+    <div class="ai-tabs">
+      <div style="padding:1.2rem 2rem;font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.25em;color:var(--red);text-transform:uppercase;">Your Dating Loop — Pattern Identified</div>
+    </div>
+    <div class="loop-display" id="loop-display"></div>
+  </div>
+
+  <!-- AI Dual Mode -->
+  <div class="ai-panel">
+    <div class="ai-tabs">
+      <button class="ai-tab active" id="tab-science" onclick="switchTab('science')">Explain My Science</button>
+      <button class="ai-tab" id="tab-reality" onclick="switchTab('reality')">Give Me The Reality Check</button>
+    </div>
+    <div class="ai-content" id="ai-content">
+      <div class="ai-loading"><div class="dot-pulse"><span></span><span></span><span></span></div><span>Generating your report…</span></div>
+    </div>
+  </div>
+
+  <!-- Share -->
+  <div class="share-strip">
+    <button class="share-btn" onclick="copyResults()">📋 Copy Results</button>
+    <button class="share-btn" onclick="saveAsPDF()">⬇ Download Report</button>
+  </div>
+  <button class="restart-btn" onclick="restartAll()">Start Over</button>
+</section>
+
+<script>
+// ═══════════════════════════════════
+// THREE.JS BACKGROUND
+// ═══════════════════════════════════
+(function(){
+  const c = document.getElementById('bg');
+  const R = new THREE.WebGLRenderer({canvas:c,antialias:true,alpha:true});
+  R.setPixelRatio(Math.min(devicePixelRatio,2));
+  R.setSize(innerWidth,innerHeight);
+  const S = new THREE.Scene(), C = new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,200);
+  C.position.z = 45;
+
+  const N = 600, geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    const r=28+Math.random()*30, t=Math.random()*Math.PI*2, p=Math.random()*Math.PI;
+    pos[i*3]=r*Math.sin(p)*Math.cos(t); pos[i*3+1]=r*Math.sin(p)*Math.sin(t); pos[i*3+2]=r*Math.cos(p)-5;
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  S.add(new THREE.Points(geo,new THREE.PointsMaterial({color:0xff4d2e,size:.15,transparent:true,opacity:.35,sizeAttenuation:true})));
+
+  // Faint amber particles
+  const geo2=new THREE.BufferGeometry(), pos2=new Float32Array(200*3);
+  for(let i=0;i<200;i++){
+    const r=15+Math.random()*20, t=Math.random()*Math.PI*2, p=Math.random()*Math.PI;
+    pos2[i*3]=r*Math.sin(p)*Math.cos(t); pos2[i*3+1]=r*Math.sin(p)*Math.sin(t); pos2[i*3+2]=r*Math.cos(p);
+  }
+  geo2.setAttribute('position',new THREE.BufferAttribute(pos2,3));
+  const pts2=new THREE.Points(geo2,new THREE.PointsMaterial({color:0xf0a500,size:.2,transparent:true,opacity:.2,sizeAttenuation:true}));
+  S.add(pts2);
+
+  const knot=new THREE.Mesh(new THREE.TorusKnotGeometry(10,.06,180,6,2,3),new THREE.MeshBasicMaterial({color:0xff4d2e,transparent:true,opacity:.055,wireframe:true}));
+  S.add(knot);
+
+  let mx=0,my=0;
+  document.addEventListener('mousemove',e=>{mx=(e.clientX/innerWidth-.5)*2; my=-(e.clientY/innerHeight-.5)*2});
+  window.addEventListener('resize',()=>{C.aspect=innerWidth/innerHeight;C.updateProjectionMatrix();R.setSize(innerWidth,innerHeight)});
+
+  const clk=new THREE.Clock();
+  (function loop(){
+    requestAnimationFrame(loop);
+    const t=clk.getElapsedTime();
+    S.children[0].rotation.y=t*.025; S.children[0].rotation.x=t*.008;
+    pts2.rotation.y=-t*.03; pts2.rotation.z=t*.01;
+    knot.rotation.y=t*.035; knot.rotation.z=t*.018;
+    C.position.x+=(mx*4-C.position.x)*.025; C.position.y+=(my*4-C.position.y)*.025;
+    C.lookAt(0,0,0); R.render(S,C);
+  })();
+})();
+
+// ═══════════════════════════════════
+// QUESTION SCHEMA
+// Each scored choice: { label, scores: { I, M, R, A } }
+// I=Insight deficit  M=Mutuality deficit  R=Regulation deficit  A=Avoidant signal
+// 0=healthy  1=mild pattern  2=moderate  3=significant
+// ═══════════════════════════════════
+const PHASES = [
+  {
+    num:1, tag:"Phase 1 — The Hook", title:"The Market Entry", titleEm:"Questions",
+    goal:"Standard questions first. We are building your baseline profile before we go deeper.",
+    questions:[
+      {
+        id:"p1_rating", name:"The Rating",
+        text:"On a scale of 1-10, how do you honestly rate yourself as a partner right now?",
+        type:"scale", hint:"First instinct only. Do not overthink it."
+      },
+      {
+        id:"p1_history", name:"The Relationship Resume",
+        text:"How long was your longest relationship — and how long ago did it end?",
+        type:"scored",
+        choices:[
+          { label:"I have never had a relationship longer than a year", scores:{I:1,M:2,R:1,A:0} },
+          { label:"2 to 5 years — ended more than 2 years ago and I have moved on", scores:{I:0,M:0,R:0,A:0} },
+          { label:"2 to 5 years — ended recently and I am still processing it", scores:{I:0,M:1,R:1,A:0} },
+          { label:"6 to 15 years — it was a major part of my identity", scores:{I:0,M:1,R:1,A:0} },
+          { label:"15 or more years — it was basically my entire adult life until now", scores:{I:0,M:2,R:1,A:0} }
+        ]
+      },
+      {
+        id:"p1_timeline", name:"The Current Status",
+        text:"How long have you been actively dating or searching — and what do you tell yourself is the reason it has not worked yet?",
+        type:"scored",
+        choices:[
+          { label:"Less than 6 months — I am just getting back out there", scores:{I:0,M:0,R:0,A:0} },
+          { label:"6 to 12 months — I have not met the right person yet but I am staying positive", scores:{I:0,M:0,R:1,A:0} },
+          { label:"1 to 3 years — the options feel limited and the apps are exhausting", scores:{I:1,M:1,R:1,A:0} },
+          { label:"3 or more years — I keep getting close but it never quite works out", scores:{I:2,M:2,R:1,A:0} },
+          { label:"I am always in something — I rarely stay single for more than a few weeks", scores:{I:1,M:2,R:2,A:0} }
+        ]
+      },
+      {
+        id:"p1_ideal", name:"The Ideal",
+        text:"When you picture the person you actually want, which description fits best?",
+        type:"scored",
+        choices:[
+          { label:"Emotionally available, consistent, and someone I can build something real with", scores:{I:0,M:0,R:0,A:0} },
+          { label:"Someone I have crazy chemistry with — if the spark is not there it will not work", scores:{I:0,M:0,R:2,A:0} },
+          { label:"Someone who genuinely needs me or who I can be there for in a real way", scores:{I:1,M:2,R:1,A:0} },
+          { label:"Someone a little hard to read — I like when I have to earn it", scores:{I:1,M:1,R:2,A:1} },
+          { label:"Honestly I just want someone who chooses me and makes me feel wanted", scores:{I:2,M:2,R:2,A:0} }
+        ]
+      },
+      {
+        id:"p1_traits", name:"The Objective Evidence",
+        text:"What are the three strongest traits you actually bring to a relationship?",
+        type:"text", hint:"Be specific. Not what you wish you brought — what you actually show up with."
+      }
+    ]
+  },
+  {
+    num:2, tag:"Phase 2 — The Mirror", title:"Pattern", titleEm:"Reveal",
+    goal:"We are looking at the people you have chosen and what they reveal about you.",
+    questions:[
+      {
+        id:"p2_common", name:"The Common Denominator",
+        text:"Look at your last 2 or 3 people you were seriously interested in. If they had one thing in common that made things difficult, what was it?",
+        type:"scored",
+        choices:[
+          { label:"They were emotionally unavailable — present physically but checked out emotionally", scores:{I:1,M:0,R:2,A:1} },
+          { label:"They were inconsistent — great one week, distant the next, no explanation", scores:{I:1,M:1,R:2,A:1} },
+          { label:"They had a lot going on — I was trying to be their support system", scores:{I:1,M:3,R:1,A:0} },
+          { label:"They were critical or hard to please — I felt like I was never quite enough", scores:{I:2,M:1,R:1,A:2} },
+          { label:"Honestly they were all pretty different — I do not see a clear pattern", scores:{I:3,M:1,R:0,A:0} }
+        ]
+      },
+      {
+        id:"p2_exit", name:"The Exit Interview",
+        text:"Think about how your last few connections ended. Which is most accurate?",
+        type:"scored",
+        choices:[
+          { label:"I saw the red flags early and ended it before it got complicated", scores:{I:0,M:0,R:0,A:1} },
+          { label:"I ended it but probably stayed longer than I should have", scores:{I:1,M:1,R:1,A:0} },
+          { label:"They ended it or pulled away — usually with vague reasons like needing space", scores:{I:1,M:2,R:1,A:0} },
+          { label:"It just faded — neither of us made a decision, it slowly died", scores:{I:1,M:2,R:0,A:1} },
+          { label:"They ghosted or disappeared without a real conversation", scores:{I:2,M:2,R:2,A:0} }
+        ]
+      },
+      {
+        id:"p2_hiring", name:"The Hiring Process",
+        text:"When you first start talking to someone new, what actually makes you want to keep going?",
+        type:"scored",
+        choices:[
+          { label:"Whether they are consistent, thoughtful, and show up the way they say they will", scores:{I:0,M:0,R:0,A:0} },
+          { label:"The chemistry — I need to feel something or there is no point", scores:{I:0,M:0,R:2,A:0} },
+          { label:"How interested they seem in me — if they are pursuing I feel more motivated", scores:{I:2,M:2,R:1,A:0} },
+          { label:"Physical attraction first — I figure the deeper stuff will come if the attraction is there", scores:{I:0,M:0,R:2,A:1} },
+          { label:"The challenge — I lose interest fast if someone is too available or easy", scores:{I:1,M:1,R:2,A:3} }
+        ]
+      },
+      {
+        id:"p2_loyalty", name:"The Loyalty Test",
+        text:"When someone you are dating does something that bothers you or crosses a line, what do you actually do?",
+        type:"scored",
+        choices:[
+          { label:"I bring it up directly and see how they handle the conversation — that tells me everything", scores:{I:0,M:0,R:0,A:0} },
+          { label:"I mention it but downplay it so it does not become a big deal", scores:{I:1,M:1,R:1,A:0} },
+          { label:"I vent to my friends about it but act fine around them", scores:{I:2,M:1,R:1,A:0} },
+          { label:"I stay quiet and hope it does not happen again — conflict makes things worse", scores:{I:2,M:1,R:1,A:2} },
+          { label:"I make excuses for it and convince myself it is not that serious", scores:{I:3,M:1,R:2,A:0} }
+        ]
+      }
+    ]
+  },
+  {
+    num:3, tag:"Phase 3 — Reality Check", title:"The", titleEm:"Accountability Pivot",
+    goal:"Now we compare what you say you want with what your actual choices produce.",
+    questions:[
+      {
+        id:"p3_gap", name:"The Desire vs Reality Gap",
+        text:"Be honest — are the people you find yourself most attracted to usually attracted to you in the same way?",
+        type:"scored",
+        choices:[
+          { label:"Yes — when I am into someone it is usually mutual or close to it", scores:{I:0,M:0,R:0,A:0} },
+          { label:"Sometimes — I can attract them but keeping the interest is where it gets complicated", scores:{I:1,M:1,R:1,A:0} },
+          { label:"Not usually — the people I want most tend to keep me at arm's length", scores:{I:1,M:2,R:2,A:0} },
+          { label:"Almost never — I tend to want people who are not really available for what I need", scores:{I:2,M:2,R:2,A:1} },
+          { label:"I notice that once someone is fully into me I start losing interest", scores:{I:1,M:1,R:1,A:3} }
+        ]
+      },
+      {
+        id:"p3_self", name:"The Self-Selection",
+        text:"If you came across your own dating profile and did not know it was you — would you swipe right?",
+        type:"scored",
+        choices:[
+          { label:"Yes — I know what I bring and I would be interested", scores:{I:0,M:0,R:0,A:0} },
+          { label:"Probably — I have things to work on but I am genuinely a good partner", scores:{I:0,M:0,R:1,A:0} },
+          { label:"Maybe — I can see the appeal but I also know my patterns would be a concern", scores:{I:1,M:1,R:1,A:0} },
+          { label:"Honestly probably not — I know what I put people through", scores:{I:2,M:1,R:2,A:0} },
+          { label:"No — I would not wish my emotional patterns on someone I was trying to date", scores:{I:3,M:2,R:2,A:0} }
+        ]
+      },
+      {
+        id:"p3_applicant", name:"The Applicant Status",
+        text:"When you are on a first or second date, what is actually going through your head most of the time?",
+        type:"scored",
+        choices:[
+          { label:"I am genuinely trying to figure out if I actually like this person and if we connect", scores:{I:0,M:0,R:0,A:0} },
+          { label:"I am trying to be my best self so they leave with a good impression", scores:{I:0,M:1,R:1,A:0} },
+          { label:"I am hoping they like me — most of my energy goes into that", scores:{I:1,M:2,R:1,A:0} },
+          { label:"I am performing — saying what I think they want to hear to keep them interested", scores:{I:2,M:2,R:2,A:0} },
+          { label:"I am in my head the whole time — replaying what I said and reading their reactions", scores:{I:2,M:1,R:3,A:0} }
+        ]
+      },
+      {
+        id:"p3_stagnation", name:"The Stagnation",
+        text:"If you change nothing — same habits, same type, same approach — where does your dating life realistically end up in 5 years?",
+        type:"text", hint:"Answer honestly, not hopefully. What does the pattern actually produce if you let it run?"
+      }
+    ]
+  },
+  {
+    num:4, tag:"Phase 4 — The Science", title:"Internal Working", titleEm:"Model",
+    goal:"We are identifying the deeper psychological patterns driving your choices.",
+    questions:[
+      {
+        id:"p4_liking", name:"The Liking Gap",
+        text:"You had a date that felt really good. What are you actually thinking about afterward?",
+        type:"scored",
+        choices:[
+          { label:"I am thinking about what I liked about them and whether I want to see them again", scores:{I:0,M:0,R:0,A:0} },
+          { label:"I am excited but low-key wondering if they felt the same way I did", scores:{I:0,M:0,R:1,A:0} },
+          { label:"I am mostly hoping they text first so I know where I stand", scores:{I:1,M:2,R:2,A:0} },
+          { label:"I am going back through the conversation trying to catch anything that might have gone wrong", scores:{I:1,M:1,R:2,A:0} },
+          { label:"I am overanalyzing every reaction they had to figure out if they are really into me", scores:{I:2,M:1,R:3,A:0} }
+        ]
+      },
+      {
+        id:"p4_validation", name:"The Validation Trap",
+        text:"What is actually going on when you open a dating app or check your matches?",
+        type:"scored",
+        choices:[
+          { label:"I open it with a clear head when I actually have time and energy for something real", scores:{I:0,M:0,R:0,A:0} },
+          { label:"I browse when I am bored — it is something to do more than a serious search", scores:{I:0,M:0,R:1,A:1} },
+          { label:"I open it when I am feeling lonely or like something is missing", scores:{I:1,M:1,R:2,A:0} },
+          { label:"I check it after something goes wrong or I get rejected — it brings me back up", scores:{I:1,M:1,R:3,A:0} },
+          { label:"I open it out of habit without thinking about it — it is more of a reflex at this point", scores:{I:2,M:1,R:3,A:0} }
+        ]
+      },
+      {
+        id:"p4_flags", name:"The Boundaries Test",
+        text:"Early on you notice something about a person that gives you pause — a red flag. What actually happens next?",
+        type:"scored",
+        choices:[
+          { label:"I bring it up or ask about it directly — their response tells me whether to continue", scores:{I:0,M:0,R:0,A:0} },
+          { label:"I file it away and keep watching — one thing is not enough to walk away", scores:{I:0,M:0,R:1,A:0} },
+          { label:"I rationalize it — nobody is perfect and I do not want to be too picky", scores:{I:1,M:1,R:1,A:0} },
+          { label:"I overlook it because starting over sounds worse than giving it more time", scores:{I:2,M:1,R:2,A:0} },
+          { label:"I convince myself it will get better once they are more comfortable with me", scores:{I:3,M:2,R:2,A:0} }
+        ]
+      },
+      {
+        id:"p4_regulation", name:"The Regulation Check",
+        text:"Someone you genuinely like starts pulling back — less texting, slower responses, seems distant. What do you do?",
+        type:"scored",
+        choices:[
+          { label:"I give them space — if they are interested they know where to find me", scores:{I:0,M:0,R:0,A:0} },
+          { label:"I send one clear message checking in and then I wait — their move", scores:{I:0,M:0,R:1,A:0} },
+          { label:"I try a little harder — a funny message, a plan suggestion, something to re-engage", scores:{I:1,M:1,R:2,A:0} },
+          { label:"I go quiet on the outside but I am spiraling internally — checking their activity, replaying everything", scores:{I:1,M:1,R:3,A:0} },
+          { label:"I push to talk about it or figure out what happened — I cannot just sit with the uncertainty", scores:{I:2,M:2,R:3,A:0} }
+        ]
+      }
+    ]
+  },
+  {
+    num:5, tag:"Phase 5 — Ownership", title:"The Hard", titleEm:"Truth Closer",
+    goal:"This is where we stop explaining and start being accountable.",
+    questions:[
+      {
+        id:"p5_blame", name:"The Blame Game",
+        text:"When something you were really hoping would work does not pan out — where does your mind actually go first?",
+        type:"scored",
+        choices:[
+          { label:"I look at what I chose and why — the pattern starts with me", scores:{I:0,M:0,R:0,A:0} },
+          { label:"I think about how I communicated and what I could have done differently", scores:{I:0,M:1,R:0,A:0} },
+          { label:"I focus on what they did wrong — they were not ready or not the right person", scores:{I:2,M:1,R:1,A:0} },
+          { label:"I blame the situation — bad timing, bad luck, things just did not line up", scores:{I:1,M:0,R:0,A:0} },
+          { label:"I blame dating in general — the apps, the culture, people are not serious anymore", scores:{I:3,M:1,R:1,A:0} }
+        ]
+      },
+      {
+        id:"p5_trauma", name:"The Trauma Dump",
+        text:"When you are getting to know someone new, how do you handle your past — the heavy stuff?",
+        type:"scored",
+        choices:[
+          { label:"I share it gradually as trust builds — context should be earned not front-loaded", scores:{I:0,M:0,R:0,A:0} },
+          { label:"I am pretty open about it early — I would rather they know who they are dealing with", scores:{I:0,M:1,R:1,A:0} },
+          { label:"I share it within the first few dates to see if they can handle it before I invest more", scores:{I:1,M:2,R:2,A:0} },
+          { label:"I tend to overshare early — it comes up naturally and I go deep fast", scores:{I:1,M:2,R:2,A:0} },
+          { label:"I put it out there deliberately as a kind of test — if they stick around they are serious", scores:{I:2,M:3,R:2,A:0} }
+        ]
+      },
+      {
+        id:"p5_complete", name:"The Investment",
+        text:"Which one of these most honestly describes your relationship with dating right now?",
+        type:"scored",
+        choices:[
+          { label:"I have a full life — I am looking for someone to add to it not complete it", scores:{I:0,M:0,R:0,A:0} },
+          { label:"Life is good but a real relationship would genuinely make it better", scores:{I:0,M:1,R:0,A:0} },
+          { label:"Dating is a big priority for me right now — I think about it a lot", scores:{I:1,M:2,R:1,A:0} },
+          { label:"Being single is hard — I feel the absence of a partner in my day-to-day life", scores:{I:2,M:2,R:2,A:0} },
+          { label:"My sense of how I feel about myself is tied to whether someone wants me right now", scores:{I:3,M:3,R:3,A:0} }
+        ]
+      },
+      {
+        id:"p5_fear", name:"The Final Accountability",
+        text:"What is the one thing about yourself — your real personality, your patterns, your history — that you hope a future partner does not find out too soon?",
+        type:"text", hint:"Do not filter this one. The more honest your answer the more accurate your results."
+      }
+    ]
+  }
+];
+
+// ═══════════════════════════════════
+// STATE
+// ═══════════════════════════════════
+let currentPhase = 0;
+const answers = {}; // id → value
+let aiCache = { science: null, reality: null };
+let activeTab = 'science';
+let archetypeKey = '';
+
+// ═══════════════════════════════════
+// ENGINE
+// ═══════════════════════════════════
+function startReport() {
+  // Pre-populate choice registry for all phases
+  PHASES.forEach(ph => buildChoiceRegistry(ph));
+  document.getElementById('hero').style.display = 'none';
+  document.getElementById('phase-engine').style.display = 'block';
+  renderPhase(0);
+  window.scrollTo(0, 0);
+}
+
+function renderPhase(idx) {
+  currentPhase = idx;
+  const ph = PHASES[idx];
+
+  // Header
+  document.getElementById('phase-header').innerHTML = `
+    <div class="phase-tag">${ph.tag}</div>
+    <h2 class="phase-title">${ph.title} <em>${ph.titleEm}</em></h2>
+    <p class="phase-goal">${ph.goal}</p>
+  `;
+
+  // Progress segments
+  const segsEl = document.getElementById('prog-segs');
+  segsEl.innerHTML = '';
+  PHASES.forEach((_, i) => {
+    const s = document.createElement('div');
+    s.className = 'prog-seg' + (i < idx ? ' done' : i === idx ? ' active' : '');
+    segsEl.appendChild(s);
+  });
+  document.getElementById('prog-label').textContent = `Phase ${idx+1} of ${PHASES.length}`;
+
+  // Questions
+  const cont = document.getElementById('questions-container');
+  cont.innerHTML = '';
+  ph.questions.forEach((q, qi) => {
+    const card = document.createElement('div');
+    card.className = 'q-card';
+    card.style.animationDelay = (qi * 80) + 'ms';
+
+    let inputHtml = '';
+    if (q.type === 'scale') {
+      const buttons = Array.from({length:10},(_,i)=>{
+        const v = i+1;
+        const sel = answers[q.id] == v ? ' sel' : '';
+        return `<button class="scale-btn${sel}" onclick="setAnswer('${q.id}',${v},this,'scale')">${v}</button>`;
+      }).join('');
+      inputHtml = `<div class="scale-wrap">${buttons}</div>`;
+    } else if (q.type === 'text') {
+      const val = answers[q.id] ? answers[q.id].text || '' : '';
+      inputHtml = `<textarea class="q-textarea" placeholder="Type your answer…" rows="3" oninput="setTextAnswer('${q.id}',this)" onkeyup="setTextAnswer('${q.id}',this)" onpaste="setTimeout(()=>setTextAnswer('${q.id}',this),0)">${val}</textarea>`;
+    } else if (q.type === 'choice') {
+      const buttons = q.choices.map((c, ci) => {
+        const sel = answers[q.id] && answers[q.id].label === c.label ? ' sel' : '';
+        return `<button class="choice-btn${sel}" onclick="pickChoice('${q.id}',${ci},this)">${c.label}</button>`;
+      }).join('');
+      inputHtml = `<div class="choice-wrap">${buttons}</div>`;
+    } else if (q.type === 'scored') {
+      const buttons = q.choices.map((c, ci) => {
+        const sel = answers[q.id] && answers[q.id].label === c.label ? ' sel' : '';
+        return `<button class="choice-btn${sel}" onclick="pickChoice('${q.id}',${ci},this)">${c.label}</button>`;
+      }).join('');
+      inputHtml = `<div class="choice-wrap">${buttons}</div>`;
+    }
+
+    card.innerHTML = `
+      <div class="q-phase-label">${ph.tag}</div>
+      <div class="q-name">${q.name}</div>
+      <div class="q-text">${q.text}</div>
+      ${q.hint ? `<div class="q-hint">${q.hint}</div>` : ''}
+      ${inputHtml}
+    `;
+    cont.appendChild(card);
+  });
+
+  // Back button visibility
+  document.getElementById('btn-back').style.opacity = idx === 0 ? '0' : '1';
+  document.getElementById('btn-back').style.pointerEvents = idx === 0 ? 'none' : 'all';
+
+  // Build choice registry for this phase so pickChoice can look up by index
+  buildChoiceRegistry(ph);
+
+  // Re-evaluate completion in case answers already exist (back navigation)
+  checkPhaseComplete();
+  window.scrollTo({top: document.getElementById('phase-engine').offsetTop - 20, behavior: 'smooth'});
+}
+
+function setAnswer(id, val, btn, type) {
+  answers[id] = val;
+  const wrap = btn.closest('.scale-wrap');
+  wrap.querySelectorAll('button').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  checkPhaseComplete();
+}
+
+// Registry: maps qId -> array of choice objects, rebuilt each phase render
+const choiceRegistry = {};
+
+function buildChoiceRegistry(ph) {
+  ph.questions.forEach(q => {
+    if (q.choices) choiceRegistry[q.id] = q.choices;
+  });
+}
+
+function pickChoice(id, idx, btn) {
+  const choice = choiceRegistry[id][idx];
+  answers[id] = choice;
+  const wrap = btn.closest('.choice-wrap');
+  wrap.querySelectorAll('button').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  checkPhaseComplete();
+}
+
+function setChoiceAnswer(id, choiceObj, btn) {
+  answers[id] = choiceObj;
+  const wrap = btn.closest('.choice-wrap');
+  wrap.querySelectorAll('button').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  checkPhaseComplete();
+}
+
+function setTextAnswer(id, el) {
+  answers[id] = { text: el.value, scores: {I:0,M:0,R:0,A:0} };
+  checkPhaseComplete();
+}
+
+function checkPhaseComplete() {
+  const ph = PHASES[currentPhase];
+  const complete = ph.questions.every(q => {
+    const v = answers[q.id];
+    if (q.type === 'scale') return v !== null && v !== undefined;
+    if (q.type === 'text') return v && v.text && v.text.trim().length > 0;
+    // scored or choice — needs a label
+    return v && v.label !== undefined;
+  });
+  const btn = document.getElementById('btn-next');
+  btn.textContent = (currentPhase < PHASES.length - 1 ? 'Continue' : 'Get My Truth Report') + ' \u2192';
+  btn.classList.toggle('on', complete);
+}
+
+function nextPhase() {
+  // Guard: don't proceed if button is not active
+  if (!document.getElementById('btn-next').classList.contains('on')) return;
+  if (currentPhase < PHASES.length - 1) {
+    renderPhase(currentPhase + 1);
+  } else {
+    generateResults();
+  }
+}
+
+function prevPhase() {
+  if (currentPhase > 0) renderPhase(currentPhase - 1);
+}
+
+// ═══════════════════════════════════
+// SCORING ENGINE
+// Reads {I, M, R, A} directly from each selected choice
+// I=Insight deficit  M=Mutuality deficit  R=Regulation deficit  A=Avoidant signal
+// Max possible per dimension varies by question count
+// ═══════════════════════════════════
+function score() {
+  let I = 0, M = 0, R = 0, A = 0;
+
+  // Self-rating adjustment: low self-raters get Insight signal
+  const rating = Number(answers.p1_rating);
+  if (rating <= 3) { I += 2; }
+  else if (rating >= 9) { I += 1; } // overconfidence also flags
+
+  // Accumulate from all scored/choice questions
+  Object.values(answers).forEach(ans => {
+    if (ans && ans.scores) {
+      I += (ans.scores.I || 0);
+      M += (ans.scores.M || 0);
+      R += (ans.scores.R || 0);
+      A += (ans.scores.A || 0);
+    }
+  });
+
+  const total = I + M + R + A;
+  // Max theoretical total across all questions ~60
+  const maxTotal = 60;
+  const rawPct = Math.round(((maxTotal - total) / maxTotal) * 100);
+  const truthScore = Math.max(8, Math.min(97, rawPct));
+
+  return { I, M, R, A, total, truthScore };
+}
+
+function detectArchetype(s) {
+  const { I, M, R, A, total, truthScore } = s;
+
+  // Secure: high truth score, low across all dimensions
+  if (truthScore >= 72 && total <= 10) return 'secure';
+
+  // Avoidant: strong A signal AND loses interest when liked back
+  const avoidantSignal = A >= 5;
+  const losesInterest = answers.p3_gap && answers.p3_gap.label && answers.p3_gap.label.includes('lose interest');
+  if (avoidantSignal || losesInterest) return 'distorted';
+
+  // Relational Bankrupt: extreme across all three RC domains
+  if (I >= 12 && M >= 10 && R >= 10) return 'bankrupt';
+  if (total >= 40) return 'bankrupt';
+
+  // Loop Operator: high regulation + mutuality (chasing / wrong filter)
+  if (R >= 8 || (M >= 8 && R >= 5)) return 'loop';
+
+  // Distorted Perceiver: high Insight deficit (cannot see self accurately)
+  if (I >= 8 && R < 6) return 'distorted';
+
+  // Default mid-range
+  if (total >= 20) return 'loop';
+  return 'distorted';
+}
+
+const ARCHETYPES = {
+  secure: {
+    tag:"Secure Strategist",
+    name:"The Secure Strategist",
+    insight:"You view dating as a data-collection process, not an emotional survival mission. Your only real risk is over-indexing self-sufficiency to the point of excluding genuine intimacy.",
+    loop:["You enter connections with clear standards and low anxiety","You evaluate consistently — interest doesn't override judgment","When mismatches appear, you exit cleanly without drama","You remain available for the next genuine connection","The cycle is healthy — your work is staying open, not fixing patterns"],
+    loopTruth:'"The goal is not to find someone perfect. It is to remain someone who attracts what you actually want."',
+    sbInsight:"80%",sbMutuality:"78%",sbRegulation:"82%",
+    colorClass:"arch-secure"
+  },
+  distorted: {
+    tag:"Distorted Perceiver",
+    name:"The Distorted Perceiver",
+    insight:"You are likely more desirable than you believe. You suffer from a Liking Gap so large that you miss the signals your dates are actively sending — and friend-zone yourself in the process.",
+    loop:["You go on a date and it goes genuinely well","Your internal monologue immediately audits everything you said wrong","You interpret their normal follow-up pace as disinterest","You pull back or over-explain yourself to compensate","They interpret your withdrawal as coldness — and the connection dies"],
+    loopTruth:'"You are not a misfit by trait. You are a misfit by perception. The gap between how you see yourself and how others see you is your entire problem."',
+    sbInsight:"35%",sbMutuality:"62%",sbRegulation:"48%",
+    colorClass:"arch-distorted"
+  },
+  loop: {
+    tag:"Loop Operator",
+    name:"The Loop Operator",
+    insight:"You are a high-volume dater with a broken filter. You are the common denominator in your last three failed connections — and you already know it.",
+    loop:["You meet someone exciting with that undeniable 'spark'","They show inconsistency or emotional unavailability","You interpret the unpredictability as depth or potential","You chase, over-invest, make excuses to your friends","The relationship collapses — and you immediately seek the next spark"],
+    loopTruth:'"Your brain has learned to mistake emotional uncertainty for attraction. You are not unlucky. You are buying from the same store and complaining the products are broken."',
+    sbInsight:"40%",sbMutuality:"38%",sbRegulation:"30%",
+    colorClass:""
+  },
+  bankrupt: {
+    tag:"Relational Bankrupt",
+    name:"The Relational Bankrupt",
+    insight:"You have deficits across all three Romantic Competence domains. You are trying to run a marathon with two broken legs. The most courageous thing you can do right now is stop dating and start repairing.",
+    loop:["You enter a new connection with high hope and intense energy","Early investment escalates faster than trust has been established","When they fail to meet the intensity, you escalate or collapse","You either love-bomb to pull them back or stonewall entirely","The relationship fractures — and you carry new evidence that love is unsafe"],
+    loopTruth:'"You are not broken beyond repair. But you are currently a liability to yourself in the dating market. The bravest move is a deliberate pause and professional support."',
+    sbInsight:"22%",sbMutuality:"25%",sbRegulation:"18%",
+    colorClass:""
+  }
+};
+
+// ═══════════════════════════════════
+// RESULTS RENDER
+// ═══════════════════════════════════
+function generateResults() {
+  document.getElementById('phase-engine').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+  window.scrollTo(0, 0);
+
+  const s = score();
+  archetypeKey = detectArchetype(s);
+  const arch = ARCHETYPES[archetypeKey];
+
+  // Truth Score counter
+  const scoreEl = document.getElementById('ts-score');
+  let c = 0;
+  const iv = setInterval(() => {
+    c = Math.min(c + 2, s.truthScore);
+    scoreEl.textContent = c + '%';
+    if (c >= s.truthScore) clearInterval(iv);
+  }, 25);
+
+  // Color class
+  document.getElementById('ts-hero').className = 'ts-hero ' + arch.colorClass;
+  document.getElementById('arch-tag').textContent = 'Your Archetype — ' + arch.tag;
+  document.getElementById('arch-name').textContent = arch.name;
+  document.getElementById('brutal-insight').textContent = arch.insight;
+
+  // Secure Base bars — invert scores to show competence %
+  const maxI = 18, maxM = 18, maxR = 18;
+  const insightPct  = Math.max(8, Math.round(((maxI - s.I) / maxI) * 100));
+  const mutPct      = Math.max(8, Math.round(((maxM - s.M) / maxM) * 100));
+  const regPct      = Math.max(8, Math.round(((maxR - s.R) / maxR) * 100));
+
+  const sbBars = document.getElementById('sb-bars');
+  sbBars.innerHTML = [
+    ['Insight (Self-Awareness)', insightPct],
+    ['Mutuality (Balance of Needs)', mutPct],
+    ['Emotion Regulation (Impulse Control)', regPct]
+  ].map(([label, pct]) => `
+    <div class="sb-row">
+      <div class="sb-row-top"><span>${label}</span><span>${pct}%</span></div>
+      <div class="sb-track"><div class="sb-fill" style="width:0%" data-pct="${pct}"></div></div>
+    </div>
+  `).join('');
+
+  setTimeout(() => {
+    sbBars.querySelectorAll('.sb-fill').forEach(el => { el.style.width = el.dataset.pct + '%'; });
+  }, 300);
+
+  // Loop
+  buildLoop(arch);
+
+  // AI
+  fetchBothModes(s, arch);
+}
+
+function buildLoop(arch) {
+  const cont = document.getElementById('loop-display');
+  cont.innerHTML = '';
+  arch.loop.forEach((step, i) => {
+    const item = document.createElement('div');
+    item.innerHTML = `
+      <div class="loop-step-r" style="animation-delay:${i*100}ms">
+        <div class="loop-num-r">${i+1}</div>
+        <div class="loop-text-r">${step}</div>
+      </div>
+      ${i < arch.loop.length-1 ? '<div class="loop-conn"></div>' : ''}
+    `;
+    cont.appendChild(item);
+  });
+  const truth = document.createElement('div');
+  truth.className = 'loop-truth';
+  truth.textContent = arch.loopTruth;
+  cont.appendChild(truth);
+}
+
+// ═══════════════════════════════════
+// AI DUAL MODE
+// ═══════════════════════════════════
+async function fetchBothModes(s, arch) {
+  const answerSummary = Object.entries(answers).map(([k,v]) => {
+    if (typeof v === 'object' && v !== null) {
+      return `${k}: ${v.label || v.text || JSON.stringify(v)}`;
+    }
+    return `${k}: ${v}`;
+  }).join('\n');
+
+  const historyAnswer = answers.p1_history ? answers.p1_history.label : 'not provided';
+  const ratingAnswer = answers.p1_rating || 'not provided';
+
+  const sciencePrompt = `You are a Relational Psychologist and behavioral scientist. Analyze this person's dating diagnostic answers using clinical frameworks.
+
+User archetype: ${arch.name}
+Truth Score: ${s.truthScore}% reality alignment
+Insight deficit: ${s.I}/18, Mutuality deficit: ${s.M}/18, Regulation deficit: ${s.R}/18, Avoidant signal: ${s.A}
+Longest relationship context: ${historyAnswer}
+Self-rating as partner: ${ratingAnswer}/10
+
+IMPORTANT CLINICAL NOTE: If this person had a relationship of 10+ years, factor in that their sense of identity, daily routine, and emotional baseline were built around partnership. Feeling incomplete without a partner in that context is not pathology — it is a rational grief response that can mimic anxious attachment. Distinguish between situational dependency (grief/transition) and structural dependency (attachment disorder) in your analysis.
+
+Key answers:
+${answerSummary}
+
+Write a clinical psychological analysis using these EXACT section headers (all caps, on their own line), followed by plain prose only. NO markdown, NO bullets, NO asterisks. Use <strong> and <em> HTML tags only.
+
+THE ATTACHMENT TAXONOMY
+Identify their attachment style and explain why their answers confirm it. If their history suggests a long partnership, note whether the patterns may be grief-driven rather than structural. 2-3 sentences.
+
+THE LIKING GAP ASSESSMENT
+Based on their post-date monologue answer and self-rating, assess their perceptual accuracy. Reference the Yale Liking Gap research. 2 sentences.
+
+THE ROMANTIC COMPETENCE PROFILE
+Explain their specific deficits across Insight, Mutuality, and Emotion Regulation using their actual answers as evidence. 3 sentences.
+
+THE HARVARD STUDY INSIGHT
+One profound finding from the Harvard Study of Adult Development that directly applies to their pattern and relationship history. Give them genuine long-term hope.
+
+Under 450 words total. Sophisticated but accessible.`;
+
+  const realityPrompt = `You are a direct, no-nonsense relationship coach. Tell this person the hard truth they need to hear.
+
+User archetype: ${arch.name}
+Truth Score: ${s.truthScore}%
+Longest relationship context: ${historyAnswer}
+Self-rating: ${ratingAnswer}/10
+
+IMPORTANT: If this person spent 15+ years in a relationship, acknowledge that their dependency impulse has a rational, structural origin — not a character flaw. Then pivot to what is still within their control.
+
+Key answers:
+${answerSummary}
+
+Write a direct accountability analysis using these EXACT section headers (all caps), followed by plain prose. NO markdown, NO bullets. Use <strong> and <em> HTML tags only.
+
+THE BRUTAL TRUTH
+Name the exact pattern this person is running. If their history explains part of it, say so — then name what they are still responsible for. 3 sentences.
+
+THE COMMON DENOMINATOR
+They are the common denominator. Explain exactly how their choices produce their outcomes. Be direct. 3 sentences.
+
+THE THREE MOVES
+Three specific, actionable things they can do this week. Bold each move name with HTML <strong> tags.
+
+THE BOTTOM LINE
+One sentence. The most important thing they need to internalize right now.
+
+Under 420 words total. Direct, honest, compassionate but unflinching.`;
+
+  // Fetch both in parallel
+  const [sciRes, realRes] = await Promise.allSettled([
+    callClaude(sciencePrompt),
+    callClaude(realityPrompt)
+  ]);
+
+  aiCache.science = sciRes.status === 'fulfilled' ? sciRes.value : buildFallbackScience(s, arch);
+  aiCache.reality = realRes.status === 'fulfilled' ? realRes.value : buildFallbackReality(s, arch);
+
+  renderTab(activeTab);
+}
+
+async function callClaude(prompt) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+  });
+  const data = await res.json();
+  const text = data.content?.map(c=>c.text||'').join('') || '';
+  if (!text) throw new Error('empty');
+  return formatAIText(text);
+}
+
+function formatAIText(text) {
+  let html = '';
+  const blocks = text.split(/\n\n+/);
+  blocks.forEach(block => {
+    const t = block.trim();
+    if (/^THE [A-Z &']+$/.test(t)) {
+      html += `<span class="sec-label">${t}</span>`;
+    } else if (t) {
+      html += `<p style="margin-bottom:.9rem">${t}</p>`;
+    }
+  });
+  return html;
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-science').classList.toggle('active', tab==='science');
+  document.getElementById('tab-reality').classList.toggle('active', tab==='reality');
+  renderTab(tab);
+}
+
+function renderTab(tab) {
+  const el = document.getElementById('ai-content');
+  const content = aiCache[tab];
+  if (!content) {
+    el.innerHTML = '<div class="ai-loading"><div class="dot-pulse"><span></span><span></span><span></span></div><span>Generating your report…</span></div>';
+  } else {
+    el.innerHTML = content;
+  }
+}
+
+// Fallbacks
+function buildFallbackScience(s, arch) {
+  const dimLabel = s.I >= s.M && s.I >= s.R ? 'Insight' : s.M >= s.R ? 'Mutuality' : 'Emotion Regulation';
+  return `<span class="sec-label">THE ATTACHMENT TAXONOMY</span>
+<p style="margin-bottom:.9rem">Based on your answers, you show strong markers of an <em>Anxious-Preoccupied</em> attachment style — particularly in how you monitor for signs of rejection and prioritize being chosen over evaluating compatibility. Your nervous system has likely learned to read inconsistency as closeness and stability as boredom.</p>
+<span class="sec-label">THE LIKING GAP ASSESSMENT</span>
+<p style="margin-bottom:.9rem">Yale research on the Liking Gap consistently finds that people underestimate how much first dates like them by a wide margin. Your self-rating and answers suggest you may be significantly undervaluing your impact on others, leading to premature disengagement or overcompensation.</p>
+<span class="sec-label">THE ROMANTIC COMPETENCE PROFILE</span>
+<p style="margin-bottom:.9rem">Your scores reveal a <strong>deficit in Insight</strong> (difficulty seeing your own patterns in real time), a moderate gap in <strong>Mutuality</strong> (centering the other person's perception above your own evaluation), and elevated <strong>Regulation challenges</strong> — specifically around tolerating ambiguity in early connection without escalating or collapsing.</p>
+<span class="sec-label">THE HARVARD STUDY INSIGHT</span>
+<p>The 85-year Harvard Study of Adult Development found one finding above all others: it is not the intensity of a relationship's beginning that predicts its quality — it is the consistency of warmth and reliability over time. The spark you're chasing is not what creates the life you want. Warmth does.</p>`;
+}
+
+function buildFallbackReality(s, arch) {
+  return `<span class="sec-label">THE BRUTAL TRUTH</span>
+<p style="margin-bottom:.9rem">You already know the pattern. You've known it for a while. The question has never been whether you can see it — it's whether you're willing to stop romanticizing it. Every answer you gave today points to the same root: you are prioritizing the feeling of pursuit over the reality of partnership.</p>
+<span class="sec-label">THE COMMON DENOMINATOR</span>
+<p style="margin-bottom:.9rem">Your last three connections shared a trait — and you named it. That trait did not appear by accident. Your selection process has a built-in filter that screens <em>for</em> that quality because it feels familiar, not because it serves you. You are the one running the filter. You can change the filter.</p>
+<span class="sec-label">THE THREE MOVES</span>
+<p style="margin-bottom:.9rem"><strong>The 48-Hour Audit:</strong> For the next two dates you go on, do not contact the person for 48 hours afterward. Notice what feelings come up. That's your regulation data. <strong>The Hiring Criteria Rewrite:</strong> Write down your actual non-negotiables — not aesthetics, not chemistry, but behavioral evidence of character. Use it as a literal checklist. <strong>The Accountability Mirror:</strong> Tell one trusted person your honest pattern — not the sanitized version. Their reflection will show you what you cannot see alone.</p>
+<span class="sec-label">THE BOTTOM LINE</span>
+<p>You are not unlucky — you have a preference for a type of person who cannot give you what you need, and until you change the preference, the outcome will not change.</p>`;
+}
+
+// ═══════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════
+function copyResults() {
+  const arch = ARCHETYPES[archetypeKey];
+  if (!arch) { alert('Please complete the assessment first.'); return; }
+  const s = score();
+  const loopText = arch.loop.map((l,i) => `${i+1}. ${l}`).join('\n');
+  const text = [
+    'AI DATING TRUTH REPORT',
+    '─'.repeat(40),
+    `Truth Score: ${s.truthScore}% Reality Alignment`,
+    `Archetype: ${arch.name}`,
+    '',
+    arch.insight,
+    '',
+    'YOUR DATING LOOP:',
+    loopText,
+    '',
+    arch.loopTruth,
+    '',
+    '─'.repeat(40),
+    'Generated by AI Dating Truth Report'
+  ].join('\n');
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => showCopyModal(text, true))
+      .catch(() => showCopyModal(text, false));
+  } else {
+    showCopyModal(text, false);
+  }
+}
+
+function showCopyModal(text, autoCopied) {
+  // Remove any existing modal
+  const existing = document.getElementById('copy-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'copy-modal';
+  modal.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;
+    display:flex;align-items:center;justify-content:center;padding:1.5rem;
+  `;
+  modal.innerHTML = `
+    <div style="background:#0f0f18;border:1px solid rgba(255,77,46,.3);max-width:560px;width:100%;padding:2rem;position:relative;">
+      <div style="font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.3em;color:#ff4d2e;text-transform:uppercase;margin-bottom:1rem;">
+        ${autoCopied ? '✓ Copied to clipboard' : 'Select all & copy (Ctrl+A, Ctrl+C)'}
+      </div>
+      <textarea id="copy-text-area" readonly style="
+        width:100%;height:200px;background:#08080d;border:1px solid rgba(255,255,255,.1);
+        color:rgba(240,237,232,.7);font-family:'DM Mono',monospace;font-size:.65rem;
+        line-height:1.7;padding:1rem;resize:none;outline:none;
+      ">${text}</textarea>
+      <div style="display:flex;gap:.5rem;margin-top:1rem;">
+        <button onclick="selectCopyText()" style="
+          flex:1;padding:.8rem;background:#ff4d2e;border:none;color:#fff;
+          font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.15em;
+          text-transform:uppercase;cursor:pointer;
+        ">Select All</button>
+        <button onclick="document.getElementById('copy-modal').remove()" style="
+          flex:1;padding:.8rem;background:transparent;border:1px solid rgba(255,255,255,.15);
+          color:rgba(240,237,232,.6);font-family:'DM Mono',monospace;font-size:.6rem;
+          letter-spacing:.15em;text-transform:uppercase;cursor:pointer;
+        ">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  // Auto-select the text
+  setTimeout(() => selectCopyText(), 100);
+}
+
+function selectCopyText() {
+  const ta = document.getElementById('copy-text-area');
+  if (!ta) return;
+  ta.select();
+  ta.setSelectionRange(0, 99999);
+  try { document.execCommand('copy'); } catch(e) {}
+}
+
+function saveAsPDF() {
+  const arch = ARCHETYPES[archetypeKey];
+  if (!arch) { alert('Please complete the assessment first.'); return; }
+  const s = score();
+
+  // Get AI analysis text content
+  const scienceContent = aiCache.science || '<p>Complete the assessment to see your full analysis.</p>';
+  const realityContent = aiCache.reality || '';
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>AI Dating Truth Report — ${arch.name}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400&display=swap');
+  body { font-family: 'Playfair Display', serif; background: #fff; color: #1a1a2e; padding: 3rem; max-width: 700px; margin: 0 auto; }
+  h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: .3rem; }
+  h1 span { font-style: italic; color: #ff4d2e; }
+  .mono { font-family: 'DM Mono', monospace; font-size: .65rem; letter-spacing: .2em; text-transform: uppercase; }
+  .score { font-size: 5rem; font-family: 'DM Mono', monospace; color: #ff4d2e; line-height: 1; margin: 1rem 0 .3rem; }
+  .tag { color: #f0a500; margin-bottom: .3rem; }
+  .archetype { font-size: 2rem; font-style: italic; font-weight: 700; margin-bottom: 1rem; }
+  .insight { font-style: italic; color: #555; margin-bottom: 2rem; line-height: 1.7; }
+  .section-label { font-family: 'DM Mono', monospace; font-size: .55rem; letter-spacing: .3em; color: #ff4d2e; text-transform: uppercase; margin-top: 1.8rem; margin-bottom: .5rem; display: block; }
+  .bar-row { margin-bottom: 1rem; }
+  .bar-label { display: flex; justify-content: space-between; font-size: .85rem; margin-bottom: .3rem; }
+  .bar-track { height: 4px; background: #eee; }
+  .bar-fill { height: 100%; background: linear-gradient(to right, #f0a500, #ff4d2e); }
+  .loop-step { display: flex; gap: 1rem; margin-bottom: .8rem; align-items: flex-start; }
+  .loop-num { font-family: 'DM Mono', monospace; font-size: .6rem; width: 24px; height: 24px; border: 1px solid #ff4d2e; color: #ff4d2e; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .loop-text { font-size: .95rem; line-height: 1.5; padding: .5rem .8rem; background: #fff5f5; border-left: 2px solid #ff4d2e; flex: 1; }
+  .loop-truth { margin-top: 1.2rem; padding: 1rem; border: 1px solid #fdd; background: #fff8f8; font-style: italic; text-align: center; font-size: 1rem; }
+  .analysis p { margin-bottom: .8rem; line-height: 1.8; font-size: 1rem; color: #333; }
+  .analysis strong { color: #1a1a2e; }
+  .analysis em { color: #f0a500; }
+  hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
+  @media print { body { padding: 1rem; } }
+</style>
+</head>
+<body>
+  <div class="mono" style="color:#ff4d2e;margin-bottom:.5rem;">AI Dating Truth Report</div>
+  <h1>The Dating <span>Truth Report</span></h1>
+  <hr>
+  <div class="mono tag">Your Truth Score</div>
+  <div class="score">${s.truthScore}%</div>
+  <div class="mono" style="color:#888;margin-bottom:1.5rem;">Reality Alignment</div>
+  <div class="mono tag">${arch.tag}</div>
+  <div class="archetype">${arch.name}</div>
+  <p class="insight">${arch.insight}</p>
+
+  <span class="section-label">Secure Base Score — Romantic Competence</span>
+  ${[
+    ['Insight (Self-Awareness)', Math.max(8, Math.round(((18 - s.I) / 18) * 100))],
+    ['Mutuality (Balance of Needs)', Math.max(8, Math.round(((18 - s.M) / 18) * 100))],
+    ['Emotion Regulation', Math.max(8, Math.round(((18 - s.R) / 18) * 100))]
+  ].map(([label, pct]) => `
+    <div class="bar-row">
+      <div class="bar-label"><span>${label}</span><span>${pct}%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+    </div>
+  `).join('')}
+
+  <span class="section-label">Your Dating Loop</span>
+  ${arch.loop.map((step, i) => `
+    <div class="loop-step">
+      <div class="loop-num">${i+1}</div>
+      <div class="loop-text">${step}</div>
+    </div>
+  `).join('')}
+  <div class="loop-truth">${arch.loopTruth}</div>
+
+  <hr>
+  <span class="section-label">Clinical Analysis</span>
+  <div class="analysis">${scienceContent}</div>
+
+  <hr>
+  <span class="section-label">The Reality Check</span>
+  <div class="analysis">${realityContent}</div>
+
+  <hr>
+  <div class="mono" style="color:#aaa;font-size:.5rem;text-align:center;">Generated by AI Dating Truth Report · For personal development use only</div>
+</body>
+</html>`;
+
+  // Try Blob download first, fall back to opening in new tab
+  try {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'dating-truth-report.html';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
+  } catch(e) {
+    // Fallback: open in new tab so user can save manually
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+    } else {
+      // Last resort: show print modal with the content
+      showDownloadModal(html);
+    }
+  }
+}
+
+function showDownloadModal(html) {
+  const existing = document.getElementById('dl-modal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'dl-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1.5rem;';
+  modal.innerHTML = `
+    <div style="background:#0f0f18;border:1px solid rgba(255,77,46,.3);max-width:560px;width:100%;padding:2rem;">
+      <div style="font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.3em;color:#ff4d2e;text-transform:uppercase;margin-bottom:1rem;">Download Your Report</div>
+      <p style="font-family:'Playfair Display',serif;color:rgba(240,237,232,.7);font-size:.95rem;margin-bottom:1.2rem;line-height:1.6;">Your browser blocked the automatic download. Copy the code below and save it as <strong style="color:#f0ede8">dating-truth-report.html</strong> on your device.</p>
+      <textarea readonly style="width:100%;height:140px;background:#08080d;border:1px solid rgba(255,255,255,.1);color:rgba(240,237,232,.5);font-family:'DM Mono',monospace;font-size:.5rem;padding:.8rem;resize:none;outline:none;" onclick="this.select()">${html.replace(/</g,'&lt;')}</textarea>
+      <button onclick="document.getElementById('dl-modal').remove()" style="margin-top:1rem;width:100%;padding:.9rem;background:transparent;border:1px solid rgba(255,255,255,.15);color:rgba(240,237,232,.6);font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function restartAll() {
+  Object.keys(answers).forEach(k => delete answers[k]);
+  aiCache = { science: null, reality: null };
+  activeTab = 'science';
+  archetypeKey = '';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('hero').style.display = 'flex';
+  window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>
